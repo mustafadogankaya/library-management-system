@@ -5,6 +5,8 @@ import com.librarysystem.exception.DuplicateIsbnException;
 import com.librarysystem.model.Book;
 import com.librarysystem.model.BookStatus;
 import com.librarysystem.service.Library;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.InputMismatchException;
 import java.util.List;
@@ -15,6 +17,8 @@ import java.util.Scanner;
  * Kütüphane yönetim sistemi için konsol tabanlı kullanıcı arayüzü.
  */
 public class ConsoleUI {
+
+    private static final Logger logger = LoggerFactory.getLogger(ConsoleUI.class);
 
     private final Library library;
     private final Scanner scanner;
@@ -90,8 +94,12 @@ public class ConsoleUI {
             System.out.println("Kitap başarıyla eklendi.");
         } catch (DuplicateIsbnException e) {
             System.err.println("Hata: " + e.getMessage());
-        } catch (Exception e) {
+        } catch (IllegalArgumentException e) {
+            System.err.println("Geçersiz kitap bilgisi: " + e.getMessage());
+            logger.warn("Kitap ekleme sırasında geçersiz veri: {}", e.getMessage());
+        } catch (RuntimeException e) {
             System.err.println("Kitap eklenirken beklenmedik bir hata oluştu: " + e.getMessage());
+            logger.error("Kitap ekleme sırasında beklenmedik hata", e);
         }
     }
 
@@ -118,8 +126,12 @@ public class ConsoleUI {
             }
         } catch (BookNotFoundException e) {
             System.err.println("Hata: " + e.getMessage());
-        } catch (Exception e) {
+        } catch (IllegalArgumentException e) {
+            System.err.println("Geçersiz girdi: " + e.getMessage());
+            logger.warn("Kitap silme sırasında geçersiz girdi: {}", e.getMessage());
+        } catch (RuntimeException e) {
             System.err.println("Kitap silinirken beklenmedik bir hata oluştu: " + e.getMessage());
+            logger.error("Kitap silme sırasında beklenmedik hata", e);
         }
     }
 
@@ -246,8 +258,12 @@ public class ConsoleUI {
         } catch (BookNotFoundException e) {
             // Bu durum yukarıda kontrol edildi ama yine de ekleyelim.
             System.err.println("Hata: " + e.getMessage());
-        } catch (Exception e) {
+        } catch (IllegalArgumentException e) {
+            System.err.println("Geçersiz kitap bilgisi: " + e.getMessage());
+            logger.warn("Kitap güncelleme sırasında geçersiz veri: {}", e.getMessage());
+        } catch (RuntimeException e) {
             System.err.println("Kitap güncellenirken beklenmedik bir hata oluştu: " + e.getMessage());
+            logger.error("Kitap güncelleme sırasında beklenmedik hata", e);
         }
     }
 
