@@ -28,8 +28,6 @@ public class Library {
 
     private static final Logger logger = LoggerFactory.getLogger(Library.class);
     
-    // Kitapları ISBN'ye göre hızlı erişim için Map'te saklayalım.
-    // ConcurrentHashMap thread-safe işlemler için uygundur.
     private final ConcurrentHashMap<String, Book> booksByIsbn;
     private final DataStorage dataStorage;
 
@@ -41,7 +39,7 @@ public class Library {
     public Library(DataStorage dataStorage) {
         this.dataStorage = dataStorage;
         this.booksByIsbn = new ConcurrentHashMap<>();
-        loadBooks(); // Uygulama başlangıcında kitapları yükle
+        loadBooks();
     }
 
     /**
@@ -56,10 +54,9 @@ public class Library {
         if (booksByIsbn.containsKey(isbn)) {
             throw new DuplicateIsbnException(LibraryConstants.ERROR_DUPLICATE_ISBN + ": " + isbn);
         }
-        // Yeni ID Book constructor tarafından atanır (Book.idCounter kullanılır)
         Book newBook = new Book(title, author, publicationYear, isbn);
         booksByIsbn.put(isbn, newBook);
-        saveBooks(); // Değişiklik sonrası kaydet
+        saveBooks();
     }
 
     /**
@@ -72,7 +69,7 @@ public class Library {
         if (removedBook == null) {
             throw new BookNotFoundException(LibraryConstants.ERROR_BOOK_NOT_FOUND + " (ISBN): " + isbn);
         }
-        saveBooks(); // Değişiklik sonrası kaydet
+        saveBooks();
     }
 
     /**
@@ -84,7 +81,7 @@ public class Library {
         Optional<Book> bookToRemove = findBookByIdInternal(id);
         if (bookToRemove.isPresent()) {
             booksByIsbn.remove(bookToRemove.get().getIsbn());
-            saveBooks(); // Değişiklik sonrası kaydet
+            saveBooks();
         } else {
             throw new BookNotFoundException(LibraryConstants.ERROR_BOOK_NOT_FOUND + " (ID): " + id);
         }
@@ -149,7 +146,7 @@ public class Library {
                 break;
             default:
                 logger.warn("{}: {}. ID'ye göre sıralanıyor.", LibraryConstants.ERROR_INVALID_SORT_FIELD, sortBy);
-                 comparator = Comparator.comparingLong(Book::getId); // Varsayılan sıralama
+                 comparator = Comparator.comparingLong(Book::getId);
         }
 
         if (!ascending) {
@@ -233,7 +230,7 @@ public class Library {
 
 
         if (updated) {
-            saveBooks(); // Sadece değişiklik yapıldıysa kaydet
+            saveBooks();
         }
     }
 
@@ -254,8 +251,7 @@ public class Library {
                 maxId = book.getId(); // En yüksek ID'yi bul
             }
         }
-         // Sadece Book sınıfındaki statik sayacı senkronize et
-        Book.syncIdCounter(maxId); // Book sınıfındaki statik sayacı senkronize et
+         Book.syncIdCounter(maxId);
         logger.info("{} kitap başarıyla yüklendi.", loadedBooks.size());
     }
 
@@ -264,7 +260,6 @@ public class Library {
      */
     private void saveBooks() {
         dataStorage.saveBooks(new ArrayList<>(booksByIsbn.values()));
-         // Kitaplar başarıyla kaydedildi - log level debug olarak ayarlandı
     }
 
      /**
@@ -283,21 +278,21 @@ public class Library {
                     int year = Integer.parseInt(value);
                     return book.getPublicationYear() == year;
                 } catch (NumberFormatException e) {
-                    return false; // Geçersiz yıl formatı
+                    return false;
                 }
             case LibraryConstants.FILTER_FIELD_STATUS:
                 try {
                     BookStatus status = BookStatus.valueOf(value.toUpperCase());
                     return book.getStatus() == status;
                 } catch (IllegalArgumentException e) {
-                    return false; // Geçersiz durum
+                    return false;
                 }
             case LibraryConstants.FILTER_FIELD_TITLE:
                  return book.getTitle().toLowerCase().contains(value.toLowerCase());
             case LibraryConstants.FILTER_FIELD_ISBN:
                  return book.getIsbn().equalsIgnoreCase(value);
             default:
-                return false; // Bilinmeyen filtre alanı
+                return false;
         }
     }
 

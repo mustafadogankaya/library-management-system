@@ -2,12 +2,13 @@ package com.librarysystem.model;
 
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicLong;
+import com.librarysystem.constants.LibraryConstants;
 
 /**
  * Kütüphanedeki bir kitabı temsil eden sınıf.
  */
 public class Book {
-    private static final AtomicLong idCounter = new AtomicLong(); // Benzersiz ID üretimi için sayaç
+    private static final AtomicLong idCounter = new AtomicLong();
 
     private long id;
     private String title;
@@ -16,19 +17,28 @@ public class Book {
     private String isbn;
     private BookStatus status;
 
-    // Jackson kütüphanesinin JSON'dan nesne oluşturabilmesi için varsayılan constructor
+    /**
+     * Default constructor for JSON deserialization.
+     */
     public Book() {
-        this.status = BookStatus.AVAILABLE; // Varsayılan durum
+        this.status = BookStatus.AVAILABLE;
     }
 
-
+    /**
+     * Creates a new book with the specified details.
+     * @param title Book title (cannot be null or empty)
+     * @param author Book author (cannot be null or empty) 
+     * @param publicationYear Publication year (must be >= 1)
+     * @param isbn ISBN number (cannot be null or empty)
+     * @throws IllegalArgumentException if any parameter is invalid
+     */
     public Book(String title, String author, int publicationYear, String isbn) {
-        this.id = idCounter.incrementAndGet(); // Otomatik artan ID ata
-        this.title = title;
-        this.author = author;
-        this.publicationYear = publicationYear;
-        this.isbn = isbn;
-        this.status = BookStatus.AVAILABLE; // Yeni eklenen kitap varsayılan olarak mevcut
+        this.id = idCounter.incrementAndGet();
+        setTitle(title);
+        setAuthor(author);
+        setPublicationYear(publicationYear);
+        setIsbn(isbn);
+        this.status = BookStatus.AVAILABLE;
     }
 
     // --- Getters ---
@@ -56,35 +66,73 @@ public class Book {
         return status;
     }
 
-     // --- Setters ---
-     // ID'nin dışarıdan değiştirilmemesi gerektiği için setId metodu yok.
-     // Ancak JSON deserialization için gerekebilir, bu yüzden ekleyelim ama dikkatli kullanalım.
+     /**
+     * Sets the ID for this book. Used primarily for JSON deserialization.
+     * Updates the global ID counter to maintain consistency.
+     * @param id The new ID for this book
+     */
      public void setId(long id) {
          this.id = id;
-         // ID sayacını güncel tutmak için (eğer yüklenen ID mevcut sayaçtan büyükse)
          idCounter.updateAndGet(current -> Math.max(current, id));
      }
 
-
+    /**
+     * Sets the title of this book.
+     * @param title The new title (cannot be null or empty)
+     * @throws IllegalArgumentException if title is null or empty
+     */
     public void setTitle(String title) {
-        this.title = title;
+        if (title == null || title.trim().isEmpty()) {
+            throw new IllegalArgumentException("Kitap başlığı boş olamaz");
+        }
+        this.title = title.trim();
     }
 
+    /**
+     * Sets the author of this book.
+     * @param author The new author (cannot be null or empty)
+     * @throws IllegalArgumentException if author is null or empty
+     */
     public void setAuthor(String author) {
-        this.author = author;
+        if (author == null || author.trim().isEmpty()) {
+            throw new IllegalArgumentException("Yazar adı boş olamaz");
+        }
+        this.author = author.trim();
     }
 
+    /**
+     * Sets the publication year of this book.
+     * @param publicationYear The new publication year (must be >= 1)
+     * @throws IllegalArgumentException if year is invalid
+     */
     public void setPublicationYear(int publicationYear) {
+        if (publicationYear < LibraryConstants.MIN_PUBLICATION_YEAR) {
+            throw new IllegalArgumentException("Yayın yılı " + LibraryConstants.MIN_PUBLICATION_YEAR + " veya daha büyük olmalı");
+        }
         this.publicationYear = publicationYear;
     }
 
+    /**
+     * Sets the ISBN of this book.
+     * @param isbn The new ISBN (cannot be null or empty)
+     * @throws IllegalArgumentException if ISBN is null or empty
+     */
     public void setIsbn(String isbn) {
-        // ISBN genellikle değişmez ama güncelleme senaryosu için ekleyebiliriz.
-        // Ancak ISBN'nin benzersiz olması gerektiği Library sınıfında kontrol edilmeli.
-        this.isbn = isbn;
+        if (isbn == null || isbn.trim().isEmpty()) {
+            throw new IllegalArgumentException("ISBN boş olamaz");
+        }
+        this.isbn = isbn.trim();
     }
 
+    /**
+     * Sets the status of this book.
+     * @param status The new status (cannot be null)
+     * @throws IllegalArgumentException if status is null
+     */
     public void setStatus(BookStatus status) {
+        if (status == null) {
+            throw new IllegalArgumentException("Kitap durumu boş olamaz");
+        }
         this.status = status;
     }
 
