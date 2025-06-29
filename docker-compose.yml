@@ -1,0 +1,58 @@
+services:
+  # Library Management Application
+  library-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: library-management-app
+    ports:
+      - "8080:8080"
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - JAVA_OPTS=-XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0
+    volumes:
+      # Persist application data
+      - library_data:/app/data
+      # Optional: Mount logs directory
+      - library_logs:/app/logs
+    restart: unless-stopped
+    networks:
+      - library-network
+
+  # PostgreSQL Database (Optional - for future database integration)
+  # Uncomment this section if you want to add database support
+  # postgres:
+  #   image: postgres:15-alpine
+  #   container_name: library-postgres
+  #   environment:
+  #     POSTGRES_DB: library_db
+  #     POSTGRES_USER: library_user
+  #     POSTGRES_PASSWORD: library_password
+  #   volumes:
+  #     - postgres_data:/var/lib/postgresql/data
+  #     - ./sql/init.sql:/docker-entrypoint-initdb.d/init.sql
+  #   ports:
+  #     - "5432:5432"
+  #   healthcheck:
+  #     test: ["CMD-SHELL", "pg_isready -U library_user -d library_db"]
+  #     interval: 30s
+  #     timeout: 10s
+  #     retries: 3
+  #   restart: unless-stopped
+  #   networks:
+  #     - library-network
+
+volumes:
+  # Application data volume
+  library_data:
+    driver: local
+  # Application logs volume
+  library_logs:
+    driver: local
+  # Database volume (for future use)
+  # postgres_data:
+  #   driver: local
+
+networks:
+  library-network:
+    driver: bridge
