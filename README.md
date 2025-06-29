@@ -37,17 +37,30 @@ git clone https://github.com/YOUR_USERNAME/library-management-system.git
 cd library-management-system
 ```
 
-### 2. Build the project
+### 2. Run with Docker (Recommended)
+```bash
+# Build and start the application with docker compose
+docker compose up --build
+
+# Or run in background
+docker compose up --build -d
+```
+
+The application will be available at: `http://localhost:8080`
+
+### 3. Alternative: Build and run locally
+
+#### Build the project
 ```bash
 mvn clean install
 ```
 
-### 3. Run the application
+#### Run the application
 ```bash
 mvn spring-boot:run
 ```
 
-### 4. Access the application
+#### Access the application
 Open your browser and navigate to: `http://localhost:8080`
 
 ## 🔧 Alternative Running Methods
@@ -64,6 +77,83 @@ java -jar target/library-management-web-1.0-SNAPSHOT.jar
 ### Development Mode (with auto-reload)
 ```bash
 mvn spring-boot:run -Dspring-boot.run.fork=false
+```
+
+## 🐳 Docker Setup
+
+This application is fully containerized and can be run using Docker.
+
+### Prerequisites
+- Docker
+- Docker Compose
+
+### Quick Start with Docker
+```bash
+# Clone the repository
+git clone https://github.com/YOUR_USERNAME/library-management-system.git
+cd library-management-system
+
+# Build and start with docker compose
+docker compose up --build
+```
+
+### Docker Commands
+
+#### Start the application
+```bash
+docker compose up --build
+```
+
+#### Start in background
+```bash
+docker compose up --build -d
+```
+
+#### Stop the application
+```bash
+docker compose down
+```
+
+#### View logs
+```bash
+docker compose logs -f
+```
+
+#### Remove volumes (reset data)
+```bash
+docker compose down -v
+```
+
+### Docker Configuration
+
+The application uses the following Docker setup:
+
+- **Dockerfile**: Multi-stage build using Eclipse Temurin JRE 17 Alpine
+- **docker-compose.yml**: Orchestrates the application with persistent volumes
+- **Data Persistence**: Application data is stored in Docker volumes
+- **Health Checks**: Built-in health monitoring via Spring Boot Actuator
+- **Environment**: Uses `docker` Spring profile for container-specific configuration
+
+### Available Services
+
+- **Application**: `http://localhost:8080`
+- **Health Check**: `http://localhost:8080/actuator/health`
+- **Application Info**: `http://localhost:8080/actuator/info`
+
+### Data Persistence
+
+The application data is automatically persisted using Docker volumes:
+- `library_data`: Stores the JSON database file
+- `library_logs`: Stores application logs
+
+### Environment Variables
+
+You can customize the application by setting environment variables in `docker-compose.yml`:
+
+```yaml
+environment:
+  - SPRING_PROFILES_ACTIVE=docker
+  - JAVA_OPTS=-XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0
 ```
 
 ## 📚 API Endpoints
