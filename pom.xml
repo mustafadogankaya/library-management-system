@@ -1,0 +1,101 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <!-- Spring Boot Parent POM -->
+    <parent>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-parent</artifactId>
+        <version>2.7.18</version> <!-- Veya daha güncel stabil bir sürüm -->
+        <relativePath/> <!-- lookup parent from repository -->
+    </parent>
+
+    <groupId>com.librarysystem</groupId>
+    <artifactId>library-management-web</artifactId> <!-- ArtifactId güncellendi -->
+    <version>1.0-SNAPSHOT</version>
+    <packaging>jar</packaging> <!-- Spring Boot için genellikle jar -->
+
+    <name>library-management-web</name>
+    <description>Library Management System Web Application</description>
+
+    <properties>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <java.version>11</java.version> <!-- Spring Boot parent'tan gelen java.version kullanılır -->
+    </properties>
+
+    <dependencies>
+        <!-- Spring Boot Web Starter -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+        </dependency>
+
+        <!-- JSON Handling (Spring Boot Web Starter ile gelir ama yine de belirtelim) -->
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+            <!-- Sürüm Spring Boot parent tarafından yönetilir -->
+        </dependency>
+        <!-- Jackson Core ve Annotations da Web Starter ile gelir -->
+
+        <!-- Spring Boot Test Starter (JUnit 5 içerir) -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <!-- Lombok (İsteğe bağlı - boilerplate kodu azaltmak için) -->
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <optional>true</optional>
+        </dependency>
+
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+                <configuration>
+                    <!-- Specify the main class for the executable JAR -->
+                    <mainClass>com.librarysystem.app.LibraryManagementWebApplication</mainClass>
+                </configuration>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>repackage</goal> <!-- Ensures the JAR is executable with dependencies -->
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <!-- Maven Surefire Plugin (Testler için) -->
+             <plugin>
+                 <groupId>org.apache.maven.plugins</groupId>
+                 <artifactId>maven-surefire-plugin</artifactId>
+                 <!-- Sürüm Spring Boot parent tarafından yönetilebilir -->
+            </plugin>
+             <!-- Maven Compiler Plugin (Java sürümünü ayarlar, parent'tan da gelir) -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <!-- Sürüm Spring Boot parent tarafından yönetilir -->
+                <configuration>
+                    <source>${java.version}</source>
+                    <target>${java.version}</target>
+                     <annotationProcessorPaths>
+                        <path>
+                            <groupId>org.projectlombok</groupId>
+                            <artifactId>lombok</artifactId>
+                            <version>${lombok.version}</version> <!-- pom.xml'de lombok.version tanımlı olmalı veya parent'tan gelmeli -->
+                        </path>
+                    </annotationProcessorPaths>
+                </configuration>
+            </plugin>
+            <!-- Eski JAR/Assembly pluginleri kaldırıldı -->
+        </plugins>
+    </build>
+</project>
