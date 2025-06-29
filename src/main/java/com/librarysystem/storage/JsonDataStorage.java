@@ -7,6 +7,8 @@ import com.librarysystem.model.Book;
 
 import org.springframework.stereotype.Repository;
 import org.springframework.beans.factory.annotation.Value;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
@@ -16,6 +18,8 @@ import java.util.List;
 @Repository
 public class JsonDataStorage implements DataStorage {
 
+    private static final Logger logger = LoggerFactory.getLogger(JsonDataStorage.class);
+    
     private final String filePath;
     private final ObjectMapper objectMapper; // Jackson ObjectMapper nesnesi
 
@@ -30,7 +34,7 @@ public class JsonDataStorage implements DataStorage {
         this.objectMapper.enable(SerializationFeature.INDENT_OUTPUT);
         // Dosya yoksa oluşturmayı dene
         ensureFileExists();
-        System.out.println("JsonDataStorage başlatıldı. Dosya yolu: " + this.filePath);
+        logger.info("JsonDataStorage başlatıldı. Dosya yolu: {}", this.filePath);
     }
 
     @Override
@@ -44,7 +48,7 @@ public class JsonDataStorage implements DataStorage {
             }
             objectMapper.writeValue(file, books);
         } catch (IOException e) {
-            System.err.println("Kitapları dosyaya kaydederken hata oluştu (" + filePath + "): " + e.getMessage());
+            logger.error("Kitapları dosyaya kaydederken hata oluştu ({}): {}", filePath, e.getMessage(), e);
             // Hata durumunda ne yapılacağına karar verilebilir (örn. loglama, kullanıcıya bildirme)
         }
     }
@@ -53,7 +57,7 @@ public class JsonDataStorage implements DataStorage {
     public List<Book> loadBooks() {
         File file = new File(filePath);
         if (!file.exists() || file.length() == 0) {
-             System.out.println("Veri dosyası bulunamadı veya boş (" + filePath + "). Yeni bir liste oluşturuluyor.");
+             logger.debug("Veri dosyası bulunamadı veya boş ({}). Yeni bir liste oluşturuluyor.", filePath);
             return new ArrayList<>(); // Dosya yoksa veya boşsa boş liste döndür
         }
 
@@ -61,7 +65,7 @@ public class JsonDataStorage implements DataStorage {
             // JSON dosyasından Book listesine dönüştürme
             return objectMapper.readValue(file, new TypeReference<List<Book>>() {});
         } catch (IOException e) {
-            System.err.println("Kitapları dosyadan yüklerken hata oluştu (" + filePath + "): " + e.getMessage());
+            logger.error("Kitapları dosyadan yüklerken hata oluştu ({}): {}", filePath, e.getMessage(), e);
             // Hata durumunda boş liste döndür veya hatayı yeniden fırlat
             return new ArrayList<>();
         }
@@ -79,12 +83,12 @@ public class JsonDataStorage implements DataStorage {
                     parentDir.mkdirs(); // Üst dizinleri oluştur
                 }
                 if (file.createNewFile()) {
-                    System.out.println("Veri dosyası oluşturuldu: " + filePath);
+                    logger.info("Veri dosyası oluşturuldu: {}", filePath);
                     // Yeni oluşturulan dosyaya boş bir JSON dizisi yazabiliriz
                     saveBooks(new ArrayList<>());
                 }
             } catch (IOException e) {
-                System.err.println("Veri dosyası oluşturulurken hata oluştu (" + filePath + "): " + e.getMessage());
+                logger.error("Veri dosyası oluşturulurken hata oluştu ({}): {}", filePath, e.getMessage(), e);
             }
         }
     }

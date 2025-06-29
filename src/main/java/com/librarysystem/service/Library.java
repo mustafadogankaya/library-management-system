@@ -5,6 +5,7 @@ import com.librarysystem.exception.DuplicateIsbnException;
 import com.librarysystem.model.Book;
 import com.librarysystem.model.BookStatus;
 import com.librarysystem.storage.DataStorage;
+import com.librarysystem.constants.LibraryConstants;
 
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -15,6 +16,8 @@ import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Kütüphanedeki kitap koleksiyonunu yöneten sınıf.
@@ -22,8 +25,9 @@ import org.springframework.stereotype.Service;
  */
 @Service
 public class Library {
-    // Kitapları ISBN'ye göre hızlı erişim için Map'te saklayalım.
-    // ConcurrentHashMap thread-safe işlemler için uygundur.
+
+    private static final Logger logger = LoggerFactory.getLogger(Library.class);
+    
     private final ConcurrentHashMap<String, Book> booksByIsbn;
     private final DataStorage dataStorage;
 
@@ -35,7 +39,7 @@ public class Library {
     public Library(DataStorage dataStorage) {
         this.dataStorage = dataStorage;
         this.booksByIsbn = new ConcurrentHashMap<>();
-        loadBooks(); // Uygulama başlangıcında kitapları yükle
+        loadBooks();
     }
 
     /**
@@ -48,12 +52,11 @@ public class Library {
      */
     public void addBook(String title, String author, int publicationYear, String isbn) throws DuplicateIsbnException {
         if (booksByIsbn.containsKey(isbn)) {
-            throw new DuplicateIsbnException("Bu ISBN numarasıyla zaten bir kitap mevcut: " + isbn);
+            throw new DuplicateIsbnException(LibraryConstants.ERROR_DUPLICATE_ISBN + ": " + isbn);
         }
-        // Yeni ID Book constructor tarafından atanır (Book.idCounter kullanılır)
         Book newBook = new Book(title, author, publicationYear, isbn);
         booksByIsbn.put(isbn, newBook);
-        saveBooks(); // Değişiklik sonrası kaydet
+        saveBooks();
     }
 
     /**
@@ -64,9 +67,9 @@ public class Library {
     public void deleteBookByIsbn(String isbn) throws BookNotFoundException {
         Book removedBook = booksByIsbn.remove(isbn);
         if (removedBook == null) {
-            throw new BookNotFoundException("Bu ISBN numarasıyla kitap bulunamadı: " + isbn);
+            throw new BookNotFoundException(LibraryConstants.ERROR_BOOK_NOT_FOUND + " (ISBN): " + isbn);
         }
-        saveBooks(); // Değişiklik sonrası kaydet
+        saveBooks();
     }
 
     /**
@@ -78,9 +81,9 @@ public class Library {
         Optional<Book> bookToRemove = findBookByIdInternal(id);
         if (bookToRemove.isPresent()) {
             booksByIsbn.remove(bookToRemove.get().getIsbn());
-            saveBooks(); // Değişiklik sonrası kaydet
+            saveBooks();
         } else {
-            throw new BookNotFoundException("Bu ID ile kitap bulunamadı: " + id);
+            throw new BookNotFoundException(LibraryConstants.ERROR_BOOK_NOT_FOUND + " (ID): " + id);
         }
     }
 
@@ -103,9 +106,9 @@ public class Library {
             return listAllBooks();
         }
 
-        String[] parts = filter.split(":", 2);
-        if (parts.length != 2) {
-            System.out.println("Geçersiz filtre formatı. Format: alan:değer (örnek: author:Orwell)");
+        String[] parts = filter.split(LibraryConstants.FILTER_DELIMITER, LibraryConstants.FILTER_PARTS_COUNT);
+        if (parts.length != LibraryConstants.FILTER_PARTS_COUNT) {
+            logger.warn(LibraryConstants.ERROR_INVALID_FILTER_FORMAT);
             return new ArrayList<>();
         }
 
@@ -126,24 +129,24 @@ public class Library {
     public List<Book> sortBooks(String sortBy, boolean ascending) {
         Comparator<Book> comparator;
         switch (sortBy.toLowerCase()) {
-            case "title":
+            case LibraryConstants.SORT_FIELD_TITLE:
                 comparator = Comparator.comparing(Book::getTitle, String.CASE_INSENSITIVE_ORDER);
                 break;
-            case "author":
+            case LibraryConstants.SORT_FIELD_AUTHOR:
                 comparator = Comparator.comparing(Book::getAuthor, String.CASE_INSENSITIVE_ORDER);
                 break;
-            case "year":
+            case LibraryConstants.SORT_FIELD_YEAR:
                 comparator = Comparator.comparingInt(Book::getPublicationYear);
                 break;
-            case "isbn":
+            case LibraryConstants.SORT_FIELD_ISBN:
                 comparator = Comparator.comparing(Book::getIsbn);
                 break;
-             case "id":
+             case LibraryConstants.SORT_FIELD_ID:
                 comparator = Comparator.comparingLong(Book::getId);
                 break;
             default:
-                System.out.println("Geçersiz sıralama alanı: " + sortBy + ". ID'ye göre sıralanıyor.");
-                 comparator = Comparator.comparingLong(Book::getId); // Varsayılan sıralama
+                logger.warn("{}: {}. ID'ye göre sıralanıyor.", LibraryConstants.ERROR_INVALID_SORT_FIELD, sortBy);
+                 comparator = Comparator.comparingLong(Book::getId);
         }
 
         if (!ascending) {
@@ -204,7 +207,7 @@ public class Library {
     public void updateBook(String isbn, String newTitle, String newAuthor, Integer newPublicationYear, BookStatus newStatus) throws BookNotFoundException {
         Book bookToUpdate = booksByIsbn.get(isbn);
         if (bookToUpdate == null) {
-            throw new BookNotFoundException("Güncellenecek kitap bulunamadı: " + isbn);
+            throw new BookNotFoundException(LibraryConstants.ERROR_BOOK_NOT_FOUND + " (güncelleme): " + isbn);
         }
 
         boolean updated = false;
@@ -216,7 +219,7 @@ public class Library {
             bookToUpdate.setAuthor(newAuthor);
             updated = true;
         }
-        if (newPublicationYear != null && newPublicationYear > 0 && newPublicationYear != bookToUpdate.getPublicationYear()) {
+        if (newPublicationYear != null && newPublicationYear >= LibraryConstants.MIN_PUBLICATION_YEAR && newPublicationYear != bookToUpdate.getPublicationYear()) {
             bookToUpdate.setPublicationYear(newPublicationYear);
             updated = true;
         }
@@ -227,7 +230,7 @@ public class Library {
 
 
         if (updated) {
-            saveBooks(); // Sadece değişiklik yapıldıysa kaydet
+            saveBooks();
         }
     }
 
@@ -248,9 +251,8 @@ public class Library {
                 maxId = book.getId(); // En yüksek ID'yi bul
             }
         }
-         // Sadece Book sınıfındaki statik sayacı senkronize et
-        Book.syncIdCounter(maxId); // Book sınıfındaki statik sayacı senkronize et
-        System.out.println(loadedBooks.size() + " kitap başarıyla yüklendi.");
+         Book.syncIdCounter(maxId);
+        logger.info("{} kitap başarıyla yüklendi.", loadedBooks.size());
     }
 
     /**
@@ -258,7 +260,6 @@ public class Library {
      */
     private void saveBooks() {
         dataStorage.saveBooks(new ArrayList<>(booksByIsbn.values()));
-         // System.out.println("Kitaplar başarıyla kaydedildi."); // Kullanıcı arayüzünde gösterilebilir
     }
 
      /**
@@ -270,28 +271,28 @@ public class Library {
      */
     private boolean matchesFilter(Book book, String field, String value) {
         switch (field) {
-            case "author":
+            case LibraryConstants.FILTER_FIELD_AUTHOR:
                 return book.getAuthor().toLowerCase().contains(value.toLowerCase());
-            case "year":
+            case LibraryConstants.FILTER_FIELD_YEAR:
                 try {
                     int year = Integer.parseInt(value);
                     return book.getPublicationYear() == year;
                 } catch (NumberFormatException e) {
-                    return false; // Geçersiz yıl formatı
+                    return false;
                 }
-            case "status":
+            case LibraryConstants.FILTER_FIELD_STATUS:
                 try {
                     BookStatus status = BookStatus.valueOf(value.toUpperCase());
                     return book.getStatus() == status;
                 } catch (IllegalArgumentException e) {
-                    return false; // Geçersiz durum
+                    return false;
                 }
-            case "title":
+            case LibraryConstants.FILTER_FIELD_TITLE:
                  return book.getTitle().toLowerCase().contains(value.toLowerCase());
-            case "isbn":
+            case LibraryConstants.FILTER_FIELD_ISBN:
                  return book.getIsbn().equalsIgnoreCase(value);
             default:
-                return false; // Bilinmeyen filtre alanı
+                return false;
         }
     }
 

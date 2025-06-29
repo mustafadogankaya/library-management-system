@@ -5,6 +5,9 @@ import com.librarysystem.exception.DuplicateIsbnException;
 import com.librarysystem.model.Book;
 import com.librarysystem.model.BookStatus;
 import com.librarysystem.service.Library;
+import com.librarysystem.constants.LibraryConstants;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.InputMismatchException;
 import java.util.List;
@@ -15,6 +18,8 @@ import java.util.Scanner;
  * Kütüphane yönetim sistemi için konsol tabanlı kullanıcı arayüzü.
  */
 public class ConsoleUI {
+
+    private static final Logger logger = LoggerFactory.getLogger(ConsoleUI.class);
 
     private final Library library;
     private final Scanner scanner;
@@ -87,11 +92,15 @@ public class ConsoleUI {
 
         try {
             library.addBook(title, author, publicationYear, isbn);
-            System.out.println("Kitap başarıyla eklendi.");
+            System.out.println(LibraryConstants.SUCCESS_BOOK_ADDED);
         } catch (DuplicateIsbnException e) {
             System.err.println("Hata: " + e.getMessage());
-        } catch (Exception e) {
+        } catch (IllegalArgumentException e) {
+            System.err.println("Geçersiz kitap bilgisi: " + e.getMessage());
+            logger.warn("Kitap ekleme sırasında geçersiz veri: {}", e.getMessage());
+        } catch (RuntimeException e) {
             System.err.println("Kitap eklenirken beklenmedik bir hata oluştu: " + e.getMessage());
+            logger.error("Kitap ekleme sırasında beklenmedik hata", e);
         }
     }
 
@@ -108,18 +117,22 @@ public class ConsoleUI {
             if (choice == 1) {
                 String isbn = readStringInput("Silinecek kitabın ISBN'i: ");
                 library.deleteBookByIsbn(isbn);
-                System.out.println("Kitap (ISBN: " + isbn + ") başarıyla silindi.");
+                System.out.println(LibraryConstants.SUCCESS_BOOK_DELETED + " (ISBN: " + isbn + ")");
             } else if (choice == 2) {
                 long id = readLongInput("Silinecek kitabın ID'si: ");
                 library.deleteBookById(id);
-                 System.out.println("Kitap (ID: " + id + ") başarıyla silindi.");
+                 System.out.println(LibraryConstants.SUCCESS_BOOK_DELETED + " (ID: " + id + ")");
             } else {
                 System.out.println("Geçersiz seçim.");
             }
         } catch (BookNotFoundException e) {
             System.err.println("Hata: " + e.getMessage());
-        } catch (Exception e) {
+        } catch (IllegalArgumentException e) {
+            System.err.println("Geçersiz girdi: " + e.getMessage());
+            logger.warn("Kitap silme sırasında geçersiz girdi: {}", e.getMessage());
+        } catch (RuntimeException e) {
             System.err.println("Kitap silinirken beklenmedik bir hata oluştu: " + e.getMessage());
+            logger.error("Kitap silme sırasında beklenmedik hata", e);
         }
     }
 
@@ -207,47 +220,111 @@ public class ConsoleUI {
         }
 
         Book currentBook = bookOptional.get();
-        System.out.println("Mevcut Bilgiler: " + currentBook);
+        displayCurrentBookInfo(currentBook);
+        
+        UpdateBookData updateData = collectUpdateData(currentBook);
+        
+        performBookUpdate(isbn, updateData);
+    }
 
+    /**
+     * Mevcut kitap bilgilerini gösterir.
+     */
+    private void displayCurrentBookInfo(Book currentBook) {
+        System.out.println("Mevcut Bilgiler: " + currentBook);
         System.out.println("Yeni bilgileri girin (Değiştirmek istemiyorsanız boş bırakın):");
+    }
+
+    /**
+     * Kullanıcıdan güncelleme verilerini toplar.
+     */
+    private UpdateBookData collectUpdateData(Book currentBook) {
         String newTitle = readStringInput("Yeni Başlık [" + currentBook.getTitle() + "]: ");
         String newAuthor = readStringInput("Yeni Yazar [" + currentBook.getAuthor() + "]: ");
         String yearStr = readStringInput("Yeni Yayın Yılı [" + currentBook.getPublicationYear() + "]: ");
         String statusStr = readStringInput("Yeni Durum (AVAILABLE/BORROWED) [" + currentBook.getStatus() + "]: ");
 
+        Integer newPublicationYear = parseYearInput(yearStr);
+        BookStatus newStatus = parseStatusInput(statusStr);
 
-        Integer newPublicationYear = null;
-        if (!yearStr.isBlank()) {
-            try {
-                newPublicationYear = Integer.parseInt(yearStr);
-            } catch (NumberFormatException e) {
-                System.out.println("Geçersiz yıl formatı. Yıl güncellenmeyecek.");
-            }
+        return new UpdateBookData(
+            newTitle.isBlank() ? null : newTitle,
+            newAuthor.isBlank() ? null : newAuthor,
+            newPublicationYear,
+            newStatus
+        );
+    }
+
+    /**
+     * Yıl girdisini parse eder ve doğrular.
+     */
+    private Integer parseYearInput(String yearStr) {
+        if (yearStr.isBlank()) {
+            return null;
         }
-
-        BookStatus newStatus = null;
-         if (!statusStr.isBlank()) {
-            try {
-                newStatus = BookStatus.valueOf(statusStr.toUpperCase());
-            } catch (IllegalArgumentException e) {
-                 System.out.println("Geçersiz durum formatı (AVAILABLE veya BORROWED girin). Durum güncellenmeyecek.");
-            }
-        }
-
 
         try {
-            // Boş bırakılan alanlar için null gönderilir, Library sınıfı bunları işlemez.
-            library.updateBook(isbn,
-                    newTitle.isBlank() ? null : newTitle,
-                    newAuthor.isBlank() ? null : newAuthor,
-                    newPublicationYear,
-                    newStatus);
-            System.out.println("Kitap başarıyla güncellendi.");
+            int year = Integer.parseInt(yearStr);
+            if (year < LibraryConstants.MIN_PUBLICATION_YEAR) {
+                System.out.println(LibraryConstants.ERROR_INVALID_YEAR + ". Yıl güncellenmeyecek.");
+                return null;
+            }
+            return year;
+        } catch (NumberFormatException e) {
+            System.out.println(LibraryConstants.ERROR_INVALID_YEAR + ". Yıl güncellenmeyecek.");
+            return null;
+        }
+    }
+
+    /**
+     * Durum girdisini parse eder ve doğrular.
+     */
+    private BookStatus parseStatusInput(String statusStr) {
+        if (statusStr.isBlank()) {
+            return null;
+        }
+
+        try {
+            return BookStatus.valueOf(statusStr.toUpperCase());
+        } catch (IllegalArgumentException e) {
+            System.out.println(LibraryConstants.ERROR_INVALID_STATUS + " (AVAILABLE veya BORROWED girin). Durum güncellenmeyecek.");
+            return null;
+        }
+    }
+
+    /**
+     * Kitap güncelleme işlemini gerçekleştirir.
+     */
+    private void performBookUpdate(String isbn, UpdateBookData updateData) {
+        try {
+            library.updateBook(isbn, updateData.title, updateData.author, 
+                             updateData.year, updateData.status);
+            System.out.println(LibraryConstants.SUCCESS_BOOK_UPDATED);
         } catch (BookNotFoundException e) {
-            // Bu durum yukarıda kontrol edildi ama yine de ekleyelim.
             System.err.println("Hata: " + e.getMessage());
-        } catch (Exception e) {
+        } catch (IllegalArgumentException e) {
+            System.err.println("Geçersiz kitap bilgisi: " + e.getMessage());
+            logger.warn("Kitap güncelleme sırasında geçersiz veri: {}", e.getMessage());
+        } catch (RuntimeException e) {
             System.err.println("Kitap güncellenirken beklenmedik bir hata oluştu: " + e.getMessage());
+            logger.error("Kitap güncelleme sırasında beklenmedik hata", e);
+        }
+    }
+
+    /**
+     * Kitap güncelleme verilerini tutan yardımcı sınıf.
+     */
+    private static class UpdateBookData {
+        final String title;
+        final String author;
+        final Integer year;
+        final BookStatus status;
+
+        UpdateBookData(String title, String author, Integer year, BookStatus status) {
+            this.title = title;
+            this.author = author;
+            this.year = year;
+            this.status = status;
         }
     }
 

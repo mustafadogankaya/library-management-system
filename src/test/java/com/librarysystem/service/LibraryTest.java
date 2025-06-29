@@ -13,7 +13,12 @@ import org.junit.jupiter.api.Test;
 import java.util.List;
 import java.util.Optional;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 class LibraryTest {
 
@@ -270,6 +275,36 @@ class LibraryTest {
     }
 
      @Test
+    @DisplayName("Geçersiz kitap verisiyle kitap oluşturulmamalı")
+    void constructor_shouldThrowException_whenInvalidData() {
+        // Test invalid title
+        assertThrows(IllegalArgumentException.class, () -> 
+            new Book(null, "Valid Author", 2023, "VALID-ISBN"));
+        assertThrows(IllegalArgumentException.class, () -> 
+            new Book("", "Valid Author", 2023, "VALID-ISBN"));
+        assertThrows(IllegalArgumentException.class, () -> 
+            new Book("   ", "Valid Author", 2023, "VALID-ISBN"));
+
+        // Test invalid author
+        assertThrows(IllegalArgumentException.class, () -> 
+            new Book("Valid Title", null, 2023, "VALID-ISBN"));
+        assertThrows(IllegalArgumentException.class, () -> 
+            new Book("Valid Title", "", 2023, "VALID-ISBN"));
+
+        // Test invalid year
+        assertThrows(IllegalArgumentException.class, () -> 
+            new Book("Valid Title", "Valid Author", 0, "VALID-ISBN"));
+        assertThrows(IllegalArgumentException.class, () -> 
+            new Book("Valid Title", "Valid Author", -1, "VALID-ISBN"));
+
+        // Test invalid ISBN
+        assertThrows(IllegalArgumentException.class, () -> 
+            new Book("Valid Title", "Valid Author", 2023, null));
+        assertThrows(IllegalArgumentException.class, () -> 
+            new Book("Valid Title", "Valid Author", 2023, ""));
+    }
+
+    @Test
     @DisplayName("Veri yükleme sonrası ID sayacı doğru ayarlanmalı")
     void loadBooks_shouldSetIdCounterCorrectly() {
         // Storage'a manuel olarak ID'leri farklı kitaplar ekle
