@@ -1,0 +1,29 @@
+[ {
+  "id" : 2,
+  "title" : "Unique Search Term Book",
+  "author" : "Search Author",
+  "publicationYear" : 2022,
+  "isbn" : "SEARCH-ISBN-001",
+  "status" : "AVAILABLE"
+}, {
+  "id" : 4,
+  "title" : "Test Kitap",
+  "author" : "Test Yazar",
+  "publicationYear" : 2023,
+  "isbn" : "TEST-ISBN-001",
+  "status" : "AVAILABLE"
+}, {
+  "id" : 1,
+  "title" : "Updated Title",
+  "author" : "Updated Author",
+  "publicationYear" : 2020,
+  "isbn" : "TEST-ISBN-003",
+  "status" : "AVAILABLE"
+}, {
+  "id" : 3,
+  "title" : "Test Kitap 2",
+  "author" : "Test Yazar 2",
+  "publicationYear" : 2023,
+  "isbn" : "TEST-ISBN-002",
+  "status" : "AVAILABLE"
+} ]
