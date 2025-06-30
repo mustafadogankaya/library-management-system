@@ -101,15 +101,54 @@ src/
 └── test/                               # Unit tests
 ```
 
-## 🧪 Running Tests
+## 🧪 Testing
+
+### Running Tests
 
 ```bash
-# Run all tests
+# Run unit tests only
 mvn test
 
-# Run tests with coverage
-mvn test jacoco:report
+# Run integration tests only  
+mvn verify -DskipUnitTests=true
+
+# Run all tests (unit + integration)
+mvn verify
+
+# Run tests with coverage report
+mvn clean verify jacoco:report
+
+# View coverage report
+open target/site/jacoco/index.html
 ```
+
+### Test Coverage
+- **Target Coverage**: 80% for critical business logic
+- **Unit Tests**: Service layer business logic
+- **Integration Tests**: REST API endpoints
+- **Coverage Report**: Generated with JaCoCo
+
+### Current Test Status
+- ✅ **Unit Tests**: 17 tests covering Library service
+- ✅ **Integration Tests**: 8 tests covering BookController API endpoints
+- ✅ **Code Coverage**: JaCoCo reporting enabled
+
+## 🔐 Security & Quality
+
+### Security Scanning
+```bash
+# Run OWASP Dependency Check
+mvn org.owasp:dependency-check-maven:check
+
+# View security report
+open target/dependency-check-report.html
+```
+
+### Continuous Integration
+- **GitHub Actions**: Automated testing on every push/PR
+- **CodeQL**: Static security analysis
+- **Dependabot**: Automated dependency updates
+- **Coverage Reporting**: Integrated with Codecov
 
 ## 📦 Building for Production
 
