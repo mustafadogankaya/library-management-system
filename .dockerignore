@@ -1,0 +1,10 @@
+# Exclude unnecessary files from Docker build context
+.git
+.github
+*.md
+.gitignore
+src/
+test-docker.*
+security.md
+.DS_Store
+*.log

@@ -66,6 +66,20 @@ java -jar target/library-management-web-1.0-SNAPSHOT.jar
 mvn spring-boot:run -Dspring-boot.run.fork=false
 ```
 
+### Using Docker
+```bash
+# Build the application
+mvn clean package -DskipTests
+
+# Build Docker image
+docker build -t library-management-system .
+
+# Run with Docker
+docker run -p 8080:8080 library-management-system
+```
+
+For detailed Docker instructions, see [README-Docker.md](README-Docker.md).
+
 ## 📚 API Endpoints
 
 ### Books API
