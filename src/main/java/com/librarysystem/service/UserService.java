@@ -9,6 +9,7 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import javax.annotation.PostConstruct;
 import javax.validation.ConstraintViolation;
 import javax.validation.Validator;
 import java.time.LocalDateTime;
@@ -32,10 +33,10 @@ public class UserService implements UserDetailsService {
     private Validator validator;
 
     public UserService() {
-        // Initialize with a default admin user
-        initializeDefaultUsers();
+        // Empty constructor - initialization moved to @PostConstruct
     }
 
+    @PostConstruct
     private void initializeDefaultUsers() {
         // Create default admin user
         User admin = new User("admin", "admin@library.com", "admin123", "System Administrator", Role.ADMIN);
