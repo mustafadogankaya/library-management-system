@@ -30,10 +30,24 @@ public class JpaDataStorage implements DataStorage {
     @Transactional
     public void saveBooks(List<Book> books) {
         try {
-            // Clear existing books and save new ones
-            // This maintains compatibility with the existing DataStorage contract
-            bookRepository.deleteAll();
-            bookRepository.saveAll(books);
+            // For each book, either save or update as needed
+            for (Book book : books) {
+                if (book.getId() > 0) {
+                    // Book has an ID, check if it exists in database
+                    if (bookRepository.existsById(book.getId())) {
+                        // Update existing book
+                        bookRepository.save(book);
+                    } else {
+                        // Book has ID but doesn't exist in DB - this can happen during initial load
+                        // Let JPA assign a new ID
+                        book.setId(0); // Reset ID to let JPA generate a new one
+                        bookRepository.save(book);
+                    }
+                } else {
+                    // New book without ID - let JPA generate ID
+                    bookRepository.save(book);
+                }
+            }
             System.out.println("Successfully saved " + books.size() + " books to database.");
         } catch (Exception e) {
             System.err.println("Error saving books to database: " + e.getMessage());

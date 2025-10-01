@@ -63,7 +63,8 @@ public class Book {
 
 
     public Book(String title, String author, int publicationYear, String isbn) {
-        this.id = idCounter.incrementAndGet(); // Otomatik artan ID ata
+        // For JPA entities, don't set ID manually - let JPA handle it with @GeneratedValue
+        // Only use the static counter for JSON storage compatibility when ID is not managed by JPA
         this.title = title;
         this.author = author;
         this.publicationYear = publicationYear;
@@ -109,8 +110,11 @@ public class Book {
      // Ancak JSON deserialization için gerekebilir, bu yüzden ekleyelim ama dikkatli kullanalım.
      public void setId(long id) {
          this.id = id;
-         // ID sayacını güncel tutmak için (eğer yüklenen ID mevcut sayaçtan büyükse)
-         idCounter.updateAndGet(current -> Math.max(current, id));
+         // Only update the static counter for JSON storage compatibility
+         // For JPA entities, this counter is not used
+         if (id > 0) {
+             idCounter.updateAndGet(current -> Math.max(current, id));
+         }
      }
 
 
@@ -172,5 +176,20 @@ public class Book {
       */
      public static void syncIdCounter(long maxId) {
          idCounter.set(maxId);
+     }
+
+     /**
+      * JSON storage için ID'li kitap oluşturur (static counter kullanır).
+      * Bu method sadece JSON storage ile uyumluluk için vardır.
+      * @param title Kitap başlığı
+      * @param author Kitap yazarı  
+      * @param publicationYear Yayın yılı
+      * @param isbn ISBN numarası
+      * @return ID'li kitap
+      */
+     public static Book createWithGeneratedId(String title, String author, int publicationYear, String isbn) {
+         Book book = new Book(title, author, publicationYear, isbn);
+         book.setId(idCounter.incrementAndGet());
+         return book;
      }
 }

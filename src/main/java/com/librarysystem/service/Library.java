@@ -50,10 +50,27 @@ public class Library {
         if (booksByIsbn.containsKey(isbn)) {
             throw new DuplicateIsbnException("Bu ISBN numarasıyla zaten bir kitap mevcut: " + isbn);
         }
-        // Yeni ID Book constructor tarafından atanır (Book.idCounter kullanılır)
-        Book newBook = new Book(title, author, publicationYear, isbn);
+        
+        // Create book with appropriate ID generation strategy
+        Book newBook;
+        if (isUsingJpaStorage()) {
+            // For JPA storage, let JPA generate the ID
+            newBook = new Book(title, author, publicationYear, isbn);
+        } else {
+            // For JSON/in-memory storage, use static counter for backward compatibility
+            newBook = Book.createWithGeneratedId(title, author, publicationYear, isbn);
+        }
+        
         booksByIsbn.put(isbn, newBook);
         saveBooks(); // Değişiklik sonrası kaydet
+    }
+
+    /**
+     * DataStorage türünün JPA olup olmadığını kontrol eder.
+     * @return JPA storage kullanılıyorsa true, aksi takdirde false
+     */
+    private boolean isUsingJpaStorage() {
+        return dataStorage.getClass().getSimpleName().contains("Jpa");
     }
 
     /**
