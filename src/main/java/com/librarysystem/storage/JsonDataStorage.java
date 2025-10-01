@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.SerializationFeature;
 import com.librarysystem.model.Book;
 
 import org.springframework.stereotype.Repository;
+import org.springframework.context.annotation.Profile;
 import org.springframework.beans.factory.annotation.Value;
 
 import java.io.File;
@@ -14,6 +15,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Repository
+@Profile("json-storage") // Only active when 'json-storage' profile is enabled
 public class JsonDataStorage implements DataStorage {
 
     private final String filePath;

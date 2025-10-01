@@ -2,23 +2,63 @@ package com.librarysystem.model;
 
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicLong;
+import java.time.LocalDateTime;
+
+import javax.persistence.*;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 
 /**
  * Kütüphanedeki bir kitabı temsil eden sınıf.
  */
+@Entity
+@Table(name = "books")
 public class Book {
+    // Keep the static counter for backward compatibility with JSON storage
+    @JsonIgnore
     private static final AtomicLong idCounter = new AtomicLong(); // Benzersiz ID üretimi için sayaç
 
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private long id;
+    
+    @Column(nullable = false)
     private String title;
+    
+    @Column(nullable = false)
     private String author;
+    
+    @Column(name = "publication_year", nullable = false)
     private int publicationYear;
+    
+    @Column(nullable = false, unique = true, length = 20)
     private String isbn;
+    
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
     private BookStatus status;
+    
+    @JsonIgnore
+    @Column(name = "created_at", updatable = false)
+    private LocalDateTime createdAt;
+    
+    @JsonIgnore
+    @Column(name = "updated_at")
+    private LocalDateTime updatedAt;
 
     // Jackson kütüphanesinin JSON'dan nesne oluşturabilmesi için varsayılan constructor
     public Book() {
         this.status = BookStatus.AVAILABLE; // Varsayılan durum
+    }
+
+    @PrePersist
+    protected void onCreate() {
+        createdAt = LocalDateTime.now();
+        updatedAt = LocalDateTime.now();
+    }
+
+    @PreUpdate
+    protected void onUpdate() {
+        updatedAt = LocalDateTime.now();
     }
 
 
@@ -54,6 +94,14 @@ public class Book {
 
     public BookStatus getStatus() {
         return status;
+    }
+
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
+    }
+
+    public LocalDateTime getUpdatedAt() {
+        return updatedAt;
     }
 
      // --- Setters ---
