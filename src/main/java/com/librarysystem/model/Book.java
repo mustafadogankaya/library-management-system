@@ -2,28 +2,69 @@ package com.librarysystem.model;
 
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicLong;
+import java.time.LocalDateTime;
+
+import javax.persistence.*;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 
 /**
  * Kütüphanedeki bir kitabı temsil eden sınıf.
  */
+@Entity
+@Table(name = "books")
 public class Book {
+    // Keep the static counter for backward compatibility with JSON storage
+    @JsonIgnore
     private static final AtomicLong idCounter = new AtomicLong(); // Benzersiz ID üretimi için sayaç
 
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private long id;
+    
+    @Column(nullable = false)
     private String title;
+    
+    @Column(nullable = false)
     private String author;
+    
+    @Column(name = "publication_year", nullable = false)
     private int publicationYear;
+    
+    @Column(nullable = false, unique = true, length = 20)
     private String isbn;
+    
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
     private BookStatus status;
+    
+    @JsonIgnore
+    @Column(name = "created_at", updatable = false)
+    private LocalDateTime createdAt;
+    
+    @JsonIgnore
+    @Column(name = "updated_at")
+    private LocalDateTime updatedAt;
 
     // Jackson kütüphanesinin JSON'dan nesne oluşturabilmesi için varsayılan constructor
     public Book() {
         this.status = BookStatus.AVAILABLE; // Varsayılan durum
     }
 
+    @PrePersist
+    protected void onCreate() {
+        createdAt = LocalDateTime.now();
+        updatedAt = LocalDateTime.now();
+    }
+
+    @PreUpdate
+    protected void onUpdate() {
+        updatedAt = LocalDateTime.now();
+    }
+
 
     public Book(String title, String author, int publicationYear, String isbn) {
-        this.id = idCounter.incrementAndGet(); // Otomatik artan ID ata
+        // For JPA entities, don't set ID manually - let JPA handle it with @GeneratedValue
+        // Only use the static counter for JSON storage compatibility when ID is not managed by JPA
         this.title = title;
         this.author = author;
         this.publicationYear = publicationYear;
@@ -56,13 +97,24 @@ public class Book {
         return status;
     }
 
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
+    }
+
+    public LocalDateTime getUpdatedAt() {
+        return updatedAt;
+    }
+
      // --- Setters ---
      // ID'nin dışarıdan değiştirilmemesi gerektiği için setId metodu yok.
      // Ancak JSON deserialization için gerekebilir, bu yüzden ekleyelim ama dikkatli kullanalım.
      public void setId(long id) {
          this.id = id;
-         // ID sayacını güncel tutmak için (eğer yüklenen ID mevcut sayaçtan büyükse)
-         idCounter.updateAndGet(current -> Math.max(current, id));
+         // Only update the static counter for JSON storage compatibility
+         // For JPA entities, this counter is not used
+         if (id > 0) {
+             idCounter.updateAndGet(current -> Math.max(current, id));
+         }
      }
 
 
@@ -124,5 +176,20 @@ public class Book {
       */
      public static void syncIdCounter(long maxId) {
          idCounter.set(maxId);
+     }
+
+     /**
+      * JSON storage için ID'li kitap oluşturur (static counter kullanır).
+      * Bu method sadece JSON storage ile uyumluluk için vardır.
+      * @param title Kitap başlığı
+      * @param author Kitap yazarı  
+      * @param publicationYear Yayın yılı
+      * @param isbn ISBN numarası
+      * @return ID'li kitap
+      */
+     public static Book createWithGeneratedId(String title, String author, int publicationYear, String isbn) {
+         Book book = new Book(title, author, publicationYear, isbn);
+         book.setId(idCounter.incrementAndGet());
+         return book;
      }
 }
