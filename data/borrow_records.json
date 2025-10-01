@@ -1,0 +1,12 @@
+[ {
+  "id" : 1,
+  "userId" : 1,
+  "bookId" : 1,
+  "borrowDate" : "2025-10-01T11:54:54.166766427",
+  "dueDate" : "2025-10-15",
+  "returnDate" : null,
+  "returned" : false,
+  "fineAmount" : 0.0,
+  "overdueDays" : 0,
+  "overdue" : false
+} ]

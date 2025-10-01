@@ -3,7 +3,11 @@ package com.librarysystem.storage;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.librarysystem.model.Book;
+import com.librarysystem.model.User;
+import com.librarysystem.model.BorrowRecord;
+import com.librarysystem.model.Reservation;
 
 import org.springframework.stereotype.Repository;
 import org.springframework.beans.factory.annotation.Value;
@@ -16,72 +20,132 @@ import java.util.List;
 @Repository
 public class JsonDataStorage implements DataStorage {
 
-    private final String filePath;
-    private final ObjectMapper objectMapper; // Jackson ObjectMapper nesnesi
+    private final String booksFilePath;
+    private final String usersFilePath;
+    private final String borrowRecordsFilePath;
+    private final String reservationsFilePath;
+    private final ObjectMapper objectMapper;
 
     /**
      * Varsayılan constructor - Spring Bean için
-     * application.properties'ten değeri okur veya varsayılan değer kullanır
      */
-    public JsonDataStorage(@Value("${library.data.file:data/library_data.json}") String filePath) {
-        this.filePath = filePath;
+    public JsonDataStorage(@Value("${library.data.file:data/library_data.json}") String baseFilePath) {
+        // Farklı dosyalar için path'leri oluştur
+        File baseFile = new File(baseFilePath);
+        String basePath = baseFile.getParent() != null ? baseFile.getParent() : "data";
+        
+        this.booksFilePath = basePath + "/books.json";
+        this.usersFilePath = basePath + "/users.json";
+        this.borrowRecordsFilePath = basePath + "/borrow_records.json";
+        this.reservationsFilePath = basePath + "/reservations.json";
+        
         this.objectMapper = new ObjectMapper();
-        // JSON'un daha okunabilir olması için pretty printing özelliğini etkinleştir
+        this.objectMapper.registerModule(new JavaTimeModule()); // Java 8 time desteği
         this.objectMapper.enable(SerializationFeature.INDENT_OUTPUT);
-        // Dosya yoksa oluşturmayı dene
-        ensureFileExists();
-        System.out.println("JsonDataStorage başlatıldı. Dosya yolu: " + this.filePath);
+        this.objectMapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
+        
+        // Dosyaları oluştur
+        ensureFileExists(booksFilePath);
+        ensureFileExists(usersFilePath);
+        ensureFileExists(borrowRecordsFilePath);
+        ensureFileExists(reservationsFilePath);
+        
+        System.out.println("JsonDataStorage başlatıldı:");
+        System.out.println("  Kitaplar: " + this.booksFilePath);
+        System.out.println("  Kullanıcılar: " + this.usersFilePath);
+        System.out.println("  Ödünç Kayıtları: " + this.borrowRecordsFilePath);
+        System.out.println("  Rezervasyonlar: " + this.reservationsFilePath);
     }
 
     @Override
     public void saveBooks(List<Book> books) {
-        try {
-            File file = new File(filePath);
-            // Gerekirse üst dizinleri oluştur
-            File parentDir = file.getParentFile();
-            if (parentDir != null && !parentDir.exists()) {
-                parentDir.mkdirs();
-            }
-            objectMapper.writeValue(file, books);
-        } catch (IOException e) {
-            System.err.println("Kitapları dosyaya kaydederken hata oluştu (" + filePath + "): " + e.getMessage());
-            // Hata durumunda ne yapılacağına karar verilebilir (örn. loglama, kullanıcıya bildirme)
-        }
+        saveToFile(books, booksFilePath, "kitapları");
     }
 
     @Override
     public List<Book> loadBooks() {
-        File file = new File(filePath);
-        if (!file.exists() || file.length() == 0) {
-             System.out.println("Veri dosyası bulunamadı veya boş (" + filePath + "). Yeni bir liste oluşturuluyor.");
-            return new ArrayList<>(); // Dosya yoksa veya boşsa boş liste döndür
-        }
+        return loadFromFile(booksFilePath, new TypeReference<List<Book>>() {}, "kitapları");
+    }
 
+    @Override
+    public void saveUsers(List<User> users) {
+        saveToFile(users, usersFilePath, "kullanıcıları");
+    }
+
+    @Override
+    public List<User> loadUsers() {
+        return loadFromFile(usersFilePath, new TypeReference<List<User>>() {}, "kullanıcıları");
+    }
+
+    @Override
+    public void saveBorrowRecords(List<BorrowRecord> borrowRecords) {
+        saveToFile(borrowRecords, borrowRecordsFilePath, "ödünç kayıtlarını");
+    }
+
+    @Override
+    public List<BorrowRecord> loadBorrowRecords() {
+        return loadFromFile(borrowRecordsFilePath, new TypeReference<List<BorrowRecord>>() {}, "ödünç kayıtlarını");
+    }
+
+    @Override
+    public void saveReservations(List<Reservation> reservations) {
+        saveToFile(reservations, reservationsFilePath, "rezervasyonları");
+    }
+
+    @Override
+    public List<Reservation> loadReservations() {
+        return loadFromFile(reservationsFilePath, new TypeReference<List<Reservation>>() {}, "rezervasyonları");
+    }
+
+    /**
+     * Generic save method
+     */
+    private <T> void saveToFile(List<T> data, String filePath, String dataType) {
         try {
-            // JSON dosyasından Book listesine dönüştürme
-            return objectMapper.readValue(file, new TypeReference<List<Book>>() {});
+            File file = new File(filePath);
+            File parentDir = file.getParentFile();
+            if (parentDir != null && !parentDir.exists()) {
+                parentDir.mkdirs();
+            }
+            objectMapper.writeValue(file, data);
         } catch (IOException e) {
-            System.err.println("Kitapları dosyadan yüklerken hata oluştu (" + filePath + "): " + e.getMessage());
-            // Hata durumunda boş liste döndür veya hatayı yeniden fırlat
+            System.err.println(dataType + " dosyaya kaydederken hata oluştu (" + filePath + "): " + e.getMessage());
+        }
+    }
+
+    /**
+     * Generic load method
+     */
+    private <T> List<T> loadFromFile(String filePath, TypeReference<List<T>> typeReference, String dataType) {
+        try {
+            File file = new File(filePath);
+            if (!file.exists() || file.length() == 0) {
+                return new ArrayList<>();
+            }
+            
+            List<T> data = objectMapper.readValue(file, typeReference);
+            return data != null ? data : new ArrayList<>();
+        } catch (IOException e) {
+            System.err.println(dataType + " dosyadan yüklerken hata oluştu (" + filePath + "): " + e.getMessage());
             return new ArrayList<>();
         }
     }
 
-     /**
+    /**
      * Veri dosyasının var olduğundan emin olur, yoksa oluşturur.
      */
-    private void ensureFileExists() {
+    private void ensureFileExists(String filePath) {
         File file = new File(filePath);
         if (!file.exists()) {
             try {
                 File parentDir = file.getParentFile();
                 if (parentDir != null && !parentDir.exists()) {
-                    parentDir.mkdirs(); // Üst dizinleri oluştur
+                    parentDir.mkdirs();
                 }
                 if (file.createNewFile()) {
                     System.out.println("Veri dosyası oluşturuldu: " + filePath);
-                    // Yeni oluşturulan dosyaya boş bir JSON dizisi yazabiliriz
-                    saveBooks(new ArrayList<>());
+                    // Yeni oluşturulan dosyaya boş bir JSON dizisi yaz
+                    objectMapper.writeValue(file, new ArrayList<>());
                 }
             } catch (IOException e) {
                 System.err.println("Veri dosyası oluşturulurken hata oluştu (" + filePath + "): " + e.getMessage());
